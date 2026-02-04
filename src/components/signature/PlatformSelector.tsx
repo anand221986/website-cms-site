@@ -26,7 +26,7 @@ interface PlatformSelectorProps {
 const PlatformSelector = ({ selectedPlatform, onSelect }: PlatformSelectorProps) => {
   return (
     <div className="bg-card rounded-xl p-6 shadow-sm border">
-      <h2 className="text-lg font-semibold text-center mb-4 text-secondary">
+      <h2 className="  text-foreground font-semibold text-center mb-4 text-secondary">
         1. Choose email platform
       </h2>
       
