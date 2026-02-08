@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import FormSection from "./FormSection";
 import { EmailSignature } from "@/types/signature";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface SignatureFormProps {
   form: Partial<EmailSignature>;
@@ -24,10 +25,12 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
     };
     reader.readAsDataURL(file);
   };
-
+  const { getUserDetails } = useAuth();
+  const userDetails = getUserDetails();
+  const userId = userDetails?.recruiter_Id;
   return (
     <div className="bg-card rounded-xl p-6 shadow-sm border">
-      <h2 className="text-lg font-semibold text-center mb-6 text-secondary">
+      <h2 className="text-lg font-semibold text-center mb-6">
         3. Enter signature details
       </h2>
 
@@ -35,7 +38,7 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
         {/* Personal Data */}
         <FormSection 
           title="Personal Data" 
-          icon={<User className="w-4 h-4 text-secondary" />}
+          icon={<User className="w-4 h-4" />}
           defaultOpen={true}
         >
           <div className="grid grid-cols-2 gap-4">
@@ -104,7 +107,7 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
         {/* Company Data */}
         <FormSection 
           title="Company Data" 
-          icon={<Building2 className="w-4 h-4 text-secondary" />}
+          icon={<Building2 className="w-4 h-4" />}
         >
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -142,7 +145,7 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
         {/* Graphics */}
         <FormSection 
           title="Graphics" 
-          icon={<ImageIcon className="w-4 h-4 text-secondary" />}
+          icon={<ImageIcon className="w-4 h-4" />}
         >
           <div className="space-y-4">
             <div className="space-y-2">
@@ -212,7 +215,7 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
         {/* Style */}
         <FormSection 
           title="Style" 
-          icon={<Palette className="w-4 h-4 text-secondary" />}
+          icon={<Palette className="w-4 h-4" />}
         >
           <p className="text-sm text-muted-foreground">
             Style customization options coming soon. Select a template above to change the signature layout.

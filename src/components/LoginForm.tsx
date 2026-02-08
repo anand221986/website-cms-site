@@ -10,16 +10,14 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 export default function LoginForm() {
-  const { user, login } = useAuth();
+  const { user, login, loginWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [forget, setForget] = useState(false);
   const navigate = useNavigate();
-
   useEffect(() => {
     if (user) navigate("/");
   }, [user, navigate]);
@@ -44,7 +42,9 @@ export default function LoginForm() {
         { token: credentialResponse.credential },
         { headers: { "Content-Type": "application/json" } }
       );
-      await login(null, null);
+      const { accessToken, user } = res.data;
+      // console.log(accessToken, user, 'rahul')
+      await loginWithGoogle(accessToken, user);
       navigate("/");
     } catch (err) {
       console.error("Google login failed", err);

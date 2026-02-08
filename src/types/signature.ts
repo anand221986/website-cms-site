@@ -13,6 +13,7 @@ export interface EmailSignature {
   logoUrl:string;
   templateId: string;
   customHTML?: string;
+  platform?:string;
   
   socialLinks: {
     facebook?: string;

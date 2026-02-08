@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Edit, Trash2 } from "lucide-react";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,10 +27,8 @@ interface TemplateViewListProps {
   pages: any[];
   fetchPages: () => Promise<void>;
 }
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const ITEMS_PER_PAGE = 10;
-
 export default function EmailTemplatesTable({
   pages,
   fetchPages,
@@ -41,71 +38,39 @@ export default function EmailTemplatesTable({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogErrors, setDialogErrors] = useState<Record<string, string>>({});
-
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [editingTemplate, setEditingTemplate] =
     useState<EmailTemplate | null>(null);
-
   const [formData, setFormData] = useState({
     name: "",
     subject: "",
     body: "",
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   /* -------------------- VALIDATION -------------------- */
   // const validateForm = () => {
-
   const validateForm = (data: {
   name: string;
   subject: string;
   body: string;
 }) => {
   const newErrors: Record<string, string> = {};
-
   if (!data.name.trim()) {
     newErrors.name = "Template name is required";
   } else if (data.name.length < 3) {
     newErrors.name = "Name must be at least 3 characters";
   }
-
   if (!data.subject.trim()) {
     newErrors.subject = "Subject is required";
   }
-
   if (!data.body.trim()) {
     newErrors.body = "Body is required";
   } else if (data.body.length < 10) {
     newErrors.body = "Body must be at least 10 characters";
   }
-
   setErrors(newErrors);
   return Object.keys(newErrors).length === 0;
 };
-
-  //   const newErrors: Record<string, string> = {};
-
-  //   if (!formData.name.trim()) {
-  //     newErrors.name = "Template name is required";
-  //   } else if (formData.name.length < 3) {
-  //     newErrors.name = "Name must be at least 3 characters";
-  //   }
-
-  //   if (!formData.subject.trim()) {
-  //     newErrors.subject = "Subject is required";
-  //   }
-
-  //   if (!formData.body.trim()) {
-  //     newErrors.body = "Body is required";
-  //   } else if (formData.body.length < 10) {
-  //     newErrors.body = "Body must be at least 10 characters";
-  //   }
-
-  //   setErrors(newErrors);
-  //   return Object.keys(newErrors).length === 0;
-  // };
-
   /* -------------------- FETCH -------------------- */
   const fetchTemplates = async () => {
     try {

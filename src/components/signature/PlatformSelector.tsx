@@ -26,7 +26,7 @@ interface PlatformSelectorProps {
 const PlatformSelector = ({ selectedPlatform, onSelect }: PlatformSelectorProps) => {
   return (
     <div className="bg-card rounded-xl p-6 shadow-sm border">
-      <h2 className="  text-foreground font-semibold text-center mb-4 text-secondary">
+      <h2 className="text-lg text-foreground font-semibold text-center mb-4">
         1. Choose email platform
       </h2>
       
@@ -37,7 +37,7 @@ const PlatformSelector = ({ selectedPlatform, onSelect }: PlatformSelectorProps)
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => onSelect(platform.id)}
-            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors ${
+            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors transform-gpu${
               selectedPlatform === platform.id
                 ? 'border-secondary bg-secondary/10'
                 : 'border-border hover:border-secondary/50'
@@ -53,7 +53,7 @@ const PlatformSelector = ({ selectedPlatform, onSelect }: PlatformSelectorProps)
 
       <p className="text-center mt-4 text-xs text-muted-foreground">
         Looking for another email platform?{' '}
-        <span className="text-secondary cursor-pointer hover:underline">
+        <span className="text-primary cursor-pointer hover:underline">
           Check out the supported platforms here
         </span>
       </p>

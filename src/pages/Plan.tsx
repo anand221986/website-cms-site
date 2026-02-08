@@ -74,7 +74,7 @@ const UsageLimits = () => {
   {/* PRO PLAN CARD */}
   <div className="bg-white border rounded-lg p-6 flex items-start justify-between">
     <div>
-      <h2 className="text-xl font-semibold text-blue-600">Gmail Pro</h2>
+      <h2 className="text-xl font-semibold text-blue-600">Easy Flow Pro</h2>
       <p className="mt-2 text-3xl font-bold text-slate-800">
         $3.00 <span className="text-sm font-medium text-slate-500">/ month</span>
       </p>

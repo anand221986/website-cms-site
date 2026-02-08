@@ -71,7 +71,7 @@ const SignaturePreview = ({ signature }: SignaturePreviewProps) => {
   return (
     <div className="bg-card rounded-xl shadow-sm border overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="font-semibold text-secondary">Signature preview</h3>
+        <h3 className="font-semibold">Signature preview</h3>
         <Button
           variant="outline"
           size="sm"

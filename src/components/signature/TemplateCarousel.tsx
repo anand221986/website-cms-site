@@ -28,7 +28,7 @@ const TemplateCarousel = ({ selectedTemplate, onSelect }: TemplateCarouselProps)
 
   return (
     <div className="bg-card rounded-xl p-6 shadow-sm border">
-      <h2 className="text-lg font-semibold text-center mb-4 text-secondary">
+      <h2 className="text-lg font-semibold text-center mb-4 ">
         2. Choose signature template
       </h2>
       

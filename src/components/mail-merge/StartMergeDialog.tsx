@@ -25,16 +25,35 @@ import {
 } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-
+import { sendMailMerge } from "@/lib/mailMerge";
 interface Template {
   id: string;
   name: string;
 }
-
 interface StartMergeDialogProps {
   templates: Template[];
-  onStartMerge: (config: MergeConfig) => void;
+  // onStartMerge: (config: MergeConfig) => void;
+  onStartMerge: (payload: StartMergePayload) => void;
   children: React.ReactNode;
+}
+export interface StartMergePayload {
+  fileName: string;
+  templateId: string;
+  sender: {
+    name: string;
+    email: string;
+    replyTo?: string;
+  };
+  trackEmails: boolean;
+  scheduledAt?: Date;
+  recipients: {
+    email: string;
+    variables: {
+      firstname?: string;
+      lastname?: string;
+      unsubscribe_link?: string;
+    };
+  }[];
 }
 
 export interface MergeConfig {
@@ -61,7 +80,6 @@ interface ParsedCSV {
   rows: string[][];
   recordCount: number;
 }
-
 const senderEmails = ["rahulknit007@gmail.com", "support@company.com", "noreply@company.com"];
 
 const NONE_VALUE = "__none__";
@@ -132,6 +150,12 @@ export const StartMergeDialog = ({
     onStartMerge({
       ...config,
       scheduledAt: new Date(date),
+      sender: {
+        name: "",
+        email: "",
+        replyTo: ""
+      },
+      recipients: []
     });
 
     setOpen(false);
@@ -224,7 +248,28 @@ const autoDetectColumns = (headers: string[]) => {
       handleFileSelect(file);
     }
   }, [handleFileSelect]);
+const buildRecipients = useCallback(() => {
+  if (!parsedData) return [];
 
+  const emailIdx = parsedData.headers.indexOf(config.emailColumn);
+  const fnIdx = parsedData.headers.indexOf(config.firstNameColumn);
+  const lnIdx = parsedData.headers.indexOf(config.lastNameColumn);
+  const unsubIdx = parsedData.headers.indexOf(config.unsubscribeColumn);
+
+  return parsedData.rows
+    .filter(row => row[emailIdx]) // safety
+    .map(row => ({
+      email: row[emailIdx],
+      variables: {
+        firstname: fnIdx !== -1 ? row[fnIdx] : undefined,
+        lastname: lnIdx !== -1 ? row[lnIdx] : undefined,
+        unsubscribe_link:
+          unsubIdx !== -1 && row[unsubIdx] === "1"
+            ? undefined
+            : `https://app.com/unsubscribe?email=${encodeURIComponent(row[emailIdx])}`,
+      },
+    }));
+}, [parsedData, config]);
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -243,11 +288,53 @@ const autoDetectColumns = (headers: string[]) => {
     else if (step === 2) setStep(1);
   };
 
-  const handleStartMerge = () => {
-    onStartMerge(config);
+  // const handleStartMerge = () => {
+  //   onStartMerge(config);
+  //   setOpen(false);
+  //   resetDialog();
+  // };
+  const handleStartMerge = async() => {
+  if (!parsedData) return;
+  const startpayload = {
+    fileName: config.fileName,
+    templateId: config.templateId,
+
+    sender: {
+      name: config.senderName,
+      email: config.sendFrom,
+      replyTo: config.replyToAddress || undefined,
+    },
+
+    trackEmails: config.trackEmails,
+    scheduledAt: config.scheduledAt,
+
+    recipients: buildRecipients(),
+  };
+
+  
+ try {
+    const data = await sendMailMerge(startpayload);
+
+    console.log("Mail merge started:", data);
+
+    alert(
+      `Mail merge started for ${startpayload.recipients.length} recipients 🚀`
+    );
+ onStartMerge(startpayload);
     setOpen(false);
     resetDialog();
-  };
+  } catch (err: any) {
+    console.error("Mail merge failed:", err);
+
+    alert(
+      err?.response?.data?.message ||
+        "Failed to start mail merge. Please try again."
+    );
+  }
+  // onStartMerge(startpayload);
+  // setOpen(false);
+  // resetDialog();
+};
 
   const resetDialog = () => {
     setStep(1);

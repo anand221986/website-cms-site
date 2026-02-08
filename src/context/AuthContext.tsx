@@ -1,8 +1,9 @@
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
   useState,
+  ReactNode,
 } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
@@ -20,6 +21,12 @@ type DecodedToken = {
   exp?: number;
 };
 
+type GoogleUser = {
+  name: string;
+  email: string;
+  picture?: string;
+};
+
 type UserDetails = {
   recruiter_Id: number;
   name: string;
@@ -29,11 +36,11 @@ type UserDetails = {
 };
 
 interface AuthContextType {
-  user: any;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (token: string, user: any) => void;
-  logout: () => void;
+  user: GoogleUser | null;
   loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (token: string, user: GoogleUser) => void;
+  logout: () => void;
   getUserRoles: () => string[];
   getUserDetails: () => UserDetails | null;
 }
@@ -42,29 +49,39 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  loading: true,
   login: async () => {},
   loginWithGoogle: () => {},
   logout: () => {},
-  loading: true,
   getUserRoles: () => [],
   getUserDetails: () => null,
 });
 
 /* ===================== PROVIDER ===================== */
 
-export const AuthProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<GoogleUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  /* ===================== INIT ===================== */
 
   useEffect(() => {
+    const token = localStorage.getItem("accessToken");
     const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+
+    if (token && savedUser) {
+      try {
+        const decoded = jwtDecode<DecodedToken>(token);
+        if (!decoded.exp || decoded.exp * 1000 > Date.now()) {
+          setUser(JSON.parse(savedUser));
+        } else {
+          logout();
+        }
+      } catch {
+        logout();
+      }
     }
+
     setLoading(false);
   }, []);
 
@@ -72,32 +89,29 @@ export const AuthProvider = ({
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/signin`, {
+      const { data } = await axios.post(`${API_BASE_URL}/auth/signin`, {
         email,
         password,
       });
 
-      const { accessToken, refreshToken, agency_id, id } = response.data;
+      const { accessToken, refreshToken, agency_id, id } = data;
 
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
       localStorage.setItem("agency_id", agency_id);
       localStorage.setItem("recruiter_id", id);
+      localStorage.setItem("user", JSON.stringify(data));
 
-      const decoded = jwtDecode<DecodedToken>(accessToken);
-      console.log("Decoded Token:", decoded);
-
-      setUser(response.data);
-      localStorage.setItem("user", JSON.stringify(response.data));
+      setUser(data);
     } catch (error) {
       console.error("Login failed", error);
-      alert("Invalid credentials");
+      throw new Error("Invalid credentials");
     }
   };
 
   /* ===================== GOOGLE LOGIN ===================== */
 
-  const loginWithGoogle = (token: string, user: any) => {
+  const loginWithGoogle = (token: string, user: GoogleUser) => {
     localStorage.setItem("accessToken", token);
     localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
@@ -114,12 +128,10 @@ export const AuthProvider = ({
 
       if (Array.isArray(decoded.role)) return decoded.role;
       if (decoded.role) return [decoded.role];
-
       if (decoded["cognito:groups"]) return decoded["cognito:groups"];
 
       return [];
-    } catch (err) {
-      console.error("Token decode error", err);
+    } catch {
       return [];
     }
   };
@@ -144,8 +156,7 @@ export const AuthProvider = ({
           : decoded.role || "",
         userId: decoded.sub,
       };
-    } catch (err) {
-      console.error("Token decode error", err);
+    } catch {
       return null;
     }
   };
@@ -154,11 +165,7 @@ export const AuthProvider = ({
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("agency_id");
-    localStorage.removeItem("recruiter_id");
+    localStorage.clear();
   };
 
   /* ===================== PROVIDER ===================== */
@@ -167,10 +174,10 @@ export const AuthProvider = ({
     <AuthContext.Provider
       value={{
         user,
+        loading,
         login,
         loginWithGoogle,
         logout,
-        loading,
         getUserRoles,
         getUserDetails,
       }}
