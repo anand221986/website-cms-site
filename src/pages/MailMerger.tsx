@@ -147,7 +147,10 @@ const CMS = () => {
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
+  const handleConnectGmail = () => {
+    // Backend handles OAuth redirect
+    window.location.href = `${API_BASE_URL}/auth/google`;
+  };
 
   /** ✅ Fetch mail merge jobs */
   const fetchJobs = async () => {
@@ -336,6 +339,12 @@ const CMS = () => {
                   onFileSelect={setSelectedFile}
                   onClear={() => setSelectedFile(null)}
                 /> */}
+                 <button
+      onClick={handleConnectGmail}
+      className="px-4 py-2 bg-red-600 text-white rounded"
+    >
+      Connect Gmail
+    </button>
                 <StartMergeDialog 
                   templates={mockTemplates} 
                   onStartMerge={handleStartMerge}

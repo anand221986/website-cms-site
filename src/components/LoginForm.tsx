@@ -17,19 +17,23 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [forget, setForget] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
     if (user) navigate("/");
   }, [user, navigate]);
-
+//code for handle sso button login submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+       setLoading(true);
       await login(email, password);
       navigate("/");
     } catch (err) {
       console.error("Login failed", err);
-    }
+    } finally {
+    setLoading(false);
+  }
   };
 
   const handleGoogleSuccess = async (
@@ -42,7 +46,7 @@ export default function LoginForm() {
         { token: credentialResponse.credential },
         { headers: { "Content-Type": "application/json" } }
       );
-      const { accessToken, user } = res.data;
+      const { accessToken, user,googleAccessToken } = res.data;
       // console.log(accessToken, user, 'rahul')
       await loginWithGoogle(accessToken, user);
       navigate("/");
@@ -155,6 +159,7 @@ export default function LoginForm() {
         <GoogleLogin
           onSuccess={handleGoogleSuccess}
           onError={handleGoogleError}
+          useOneTap={false}
         />
       </div>
     </div>

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { sendMailMerge } from "@/lib/mailMerge";
+import { useAuth } from "@/context/AuthContext";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 interface Template {
   id: string;
   name: string;
@@ -84,20 +87,22 @@ const senderEmails = ["rahulknit007@gmail.com", "support@company.com", "noreply@
 
 const NONE_VALUE = "__none__";
 
-export const StartMergeDialog = ({ 
-  templates, 
-  onStartMerge, 
-  children 
+export const StartMergeDialog = ({
+  templates,
+  onStartMerge,
+  children
 }: StartMergeDialogProps) => {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
-  
+
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedCSV | null>(null);
-  
+  const { getUserDetails } = useAuth();
+  const users = getUserDetails();
+  console.log(getUserDetails(), 'rahul tripathi')
   const [config, setConfig] = useState<MergeConfig>({
     emailColumn: "",
     firstNameColumn: "",
@@ -121,86 +126,111 @@ export const StartMergeDialog = ({
   };
 
   const handleSendTestEmail = async () => {
-    if (!config.templateId || !config.senderName) {
-      alert("Please select template and sender name");
-      return;
-    }
-
     try {
-      await fetch("/api/mail-merge/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          templateId: config.templateId,
-          senderName: config.senderName,
-          sendFrom: config.sendFrom,
-          trackEmails: config.trackEmails,
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/auth/google/send-mail`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            accessToken: '', // <-- Gmail OAuth token
+            from: config.sendFrom,
+            to: config.sendFrom,
+            // "test@example.com",
+            templateId: config.templateId,
+          }),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to send email");
+      }
       alert("Test email sent successfully");
     } catch (error) {
       console.error("Failed to send test email:", error);
+      alert(error.message);
     }
   };
 
-  const handleSchedule = () => {
+
+  const handleSchedule = async () => {
     const date = prompt("Enter schedule date (YYYY-MM-DD HH:mm)");
     if (!date) return;
 
-    onStartMerge({
-      ...config,
-      scheduledAt: new Date(date),
-      sender: {
-        name: "",
-        email: "",
-        replyTo: ""
-      },
-      recipients: []
-    });
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/auth/google/send-mail`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            accessToken: "", // Gmail OAuth token
+            from: config.sendFrom,
+            to: config.sendFrom,
+            templateId: config.templateId,
+            scheduledAt: new Date(date).toISOString(), // 👈 key difference
+          }),
+        }
+      );
 
-    setOpen(false);
-    resetDialog();
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to schedule email");
+      }
+
+      alert("Email scheduled successfully 🕒");
+      setOpen(false);
+      resetDialog();
+    } catch (error) {
+      console.error("Failed to schedule email:", error);
+      alert(error.message);
+    }
   };
 
-const parseCSV = useCallback((text: string): ParsedCSV => {
-  const lines = text.trim().split('\n');
+  const parseCSV = useCallback((text: string): ParsedCSV => {
+    const lines = text.trim().split('\n');
 
-  // detect delimiter
-  const delimiter = lines[0].includes('\t') ? '\t' : ',';
+    // detect delimiter
+    const delimiter = lines[0].includes('\t') ? '\t' : ',';
 
-  const headers = lines[0]
-    .split(delimiter)
-    .map(h => h.trim().replace(/^"|"$/g, ''))
-    .filter(Boolean); // ⬅️ remove empty headers
-
-  const rows = lines.slice(1).map(line =>
-    line
+    const headers = lines[0]
       .split(delimiter)
-      .map(cell => cell.trim().replace(/^"|"$/g, ''))
-  );
+      .map(h => h.trim().replace(/^"|"$/g, ''))
+      .filter(Boolean); // ⬅️ remove empty headers
 
-  return {
-    headers,
-    rows,
-    recordCount: rows.length,
+    const rows = lines.slice(1).map(line =>
+      line
+        .split(delimiter)
+        .map(cell => cell.trim().replace(/^"|"$/g, ''))
+    );
+
+    return {
+      headers,
+      rows,
+      recordCount: rows.length,
+    };
+  }, []);
+
+  const autoDetectColumns = (headers: string[]) => {
+    const normalize = (h: string) => h.toLowerCase().replace(/\s|_/g, "");
+
+    const findHeader = (candidates: string[]) =>
+      headers.find(h =>
+        candidates.some(c => normalize(h).includes(c))
+      ) || "";
+
+    return {
+      emailColumn: findHeader(["email", "emailaddress"]),
+      firstNameColumn: findHeader(["firstname", "fname", "first"]),
+      lastNameColumn: findHeader(["lastname", "lname", "last"]),
+      unsubscribeColumn: findHeader(["unsubscribe", "optout", "subscription"]),
+    };
   };
-}, []);
-
-const autoDetectColumns = (headers: string[]) => {
-  const normalize = (h: string) => h.toLowerCase().replace(/\s|_/g, "");
-
-  const findHeader = (candidates: string[]) =>
-    headers.find(h =>
-      candidates.some(c => normalize(h).includes(c))
-    ) || "";
-
-  return {
-    emailColumn: findHeader(["email", "emailaddress"]),
-    firstNameColumn: findHeader(["firstname", "fname", "first"]),
-    lastNameColumn: findHeader(["lastname", "lname", "last"]),
-    unsubscribeColumn: findHeader(["unsubscribe", "optout", "subscription"]),
-  };
-};
 
   const handleFileSelect = useCallback(async (file: File) => {
     setCsvFile(file);
@@ -223,12 +253,12 @@ const autoDetectColumns = (headers: string[]) => {
       const detected = autoDetectColumns(parsed.headers);
       clearInterval(progressInterval);
       setProcessingProgress(100);
-      
+
       setTimeout(() => {
         setParsedData(parsed);
         setConfig(prev => ({
           ...prev,
-           ...detected,
+          ...detected,
           recipientCount: parsed.recordCount,
           fileName: file.name,
         }));
@@ -248,28 +278,28 @@ const autoDetectColumns = (headers: string[]) => {
       handleFileSelect(file);
     }
   }, [handleFileSelect]);
-const buildRecipients = useCallback(() => {
-  if (!parsedData) return [];
+  const buildRecipients = useCallback(() => {
+    if (!parsedData) return [];
 
-  const emailIdx = parsedData.headers.indexOf(config.emailColumn);
-  const fnIdx = parsedData.headers.indexOf(config.firstNameColumn);
-  const lnIdx = parsedData.headers.indexOf(config.lastNameColumn);
-  const unsubIdx = parsedData.headers.indexOf(config.unsubscribeColumn);
+    const emailIdx = parsedData.headers.indexOf(config.emailColumn);
+    const fnIdx = parsedData.headers.indexOf(config.firstNameColumn);
+    const lnIdx = parsedData.headers.indexOf(config.lastNameColumn);
+    const unsubIdx = parsedData.headers.indexOf(config.unsubscribeColumn);
 
-  return parsedData.rows
-    .filter(row => row[emailIdx]) // safety
-    .map(row => ({
-      email: row[emailIdx],
-      variables: {
-        firstname: fnIdx !== -1 ? row[fnIdx] : undefined,
-        lastname: lnIdx !== -1 ? row[lnIdx] : undefined,
-        unsubscribe_link:
-          unsubIdx !== -1 && row[unsubIdx] === "1"
-            ? undefined
-            : `https://app.com/unsubscribe?email=${encodeURIComponent(row[emailIdx])}`,
-      },
-    }));
-}, [parsedData, config]);
+    return parsedData.rows
+      .filter(row => row[emailIdx]) // safety
+      .map(row => ({
+        email: row[emailIdx],
+        variables: {
+          firstname: fnIdx !== -1 ? row[fnIdx] : undefined,
+          lastname: lnIdx !== -1 ? row[lnIdx] : undefined,
+          unsubscribe_link:
+            unsubIdx !== -1 && row[unsubIdx] === "1"
+              ? undefined
+              : `https://app.com/unsubscribe?email=${encodeURIComponent(row[emailIdx])}`,
+        },
+      }));
+  }, [parsedData, config]);
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -293,48 +323,48 @@ const buildRecipients = useCallback(() => {
   //   setOpen(false);
   //   resetDialog();
   // };
-  const handleStartMerge = async() => {
-  if (!parsedData) return;
-  const startpayload = {
-    fileName: config.fileName,
-    templateId: config.templateId,
+  const handleStartMerge = async () => {
+    if (!parsedData) return;
+    const startpayload = {
+      fileName: config.fileName,
+      templateId: config.templateId,
 
-    sender: {
-      name: config.senderName,
-      email: config.sendFrom,
-      replyTo: config.replyToAddress || undefined,
-    },
+      sender: {
+        name: config.senderName,
+        email: config.sendFrom,
+        replyTo: config.replyToAddress || undefined,
+      },
 
-    trackEmails: config.trackEmails,
-    scheduledAt: config.scheduledAt,
+      trackEmails: config.trackEmails,
+      scheduledAt: config.scheduledAt,
 
-    recipients: buildRecipients(),
-  };
+      recipients: buildRecipients(),
+    };
 
-  
- try {
-    const data = await sendMailMerge(startpayload);
 
-    console.log("Mail merge started:", data);
+    try {
+      const data = await sendMailMerge(startpayload);
 
-    alert(
-      `Mail merge started for ${startpayload.recipients.length} recipients 🚀`
-    );
- onStartMerge(startpayload);
-    setOpen(false);
-    resetDialog();
-  } catch (err: any) {
-    console.error("Mail merge failed:", err);
+      console.log("Mail merge started:", data);
 
-    alert(
-      err?.response?.data?.message ||
+      alert(
+        `Mail merge started for ${startpayload.recipients.length} recipients 🚀`
+      );
+      onStartMerge(startpayload);
+      setOpen(false);
+      resetDialog();
+    } catch (err: any) {
+      console.error("Mail merge failed:", err);
+
+      alert(
+        err?.response?.data?.message ||
         "Failed to start mail merge. Please try again."
-    );
-  }
-  // onStartMerge(startpayload);
-  // setOpen(false);
-  // resetDialog();
-};
+      );
+    }
+    // onStartMerge(startpayload);
+    // setOpen(false);
+    // resetDialog();
+  };
 
   const resetDialog = () => {
     setStep(1);
@@ -390,7 +420,14 @@ const buildRecipients = useCallback(() => {
     if (config.unsubscribeColumn) count++;
     return count;
   };
-
+  useEffect(() => {
+    if (users?.name && users?.email) {
+      updateConfig(
+        "senderName",
+        `${users.name} <${users.email}>`
+      );
+    }
+  }, []);
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
       setOpen(isOpen);
@@ -411,11 +448,10 @@ const buildRecipients = useCallback(() => {
         <div className="flex items-center gap-2 mb-2">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2">
-              <div className={`h-7 w-7 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                step >= s 
-                  ? 'bg-primary text-primary-foreground' 
+              <div className={`h-7 w-7 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${step >= s
+                  ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground'
-              }`}>
+                }`}>
                 {step > s ? <Check className="h-4 w-4" /> : s}
               </div>
               {s < 3 && <div className={`h-0.5 w-8 ${step > s ? 'bg-primary' : 'bg-muted'}`} />}
@@ -464,7 +500,7 @@ const buildRecipients = useCallback(() => {
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                
+
                 {isProcessing ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -502,8 +538,8 @@ const buildRecipients = useCallback(() => {
                     <Label className="text-xs flex items-center gap-1">
                       Email <span className="text-destructive">*</span>
                     </Label>
-                    <Select 
-                      value={config.emailColumn} 
+                    <Select
+                      value={config.emailColumn}
                       onValueChange={(val) => updateConfig("emailColumn", val)}
                     >
                       <SelectTrigger className="h-9">
@@ -527,7 +563,7 @@ const buildRecipients = useCallback(() => {
                   {/* First Name Column */}
                   <div className="space-y-1.5">
                     <Label className="text-xs">First Name</Label>
-                    <Select 
+                    <Select
                       value={(config.firstNameColumn ?? -1).toString()}
                       onValueChange={(val) => updateConfig("firstNameColumn", val === NONE_VALUE ? "" : val)}
                     >
@@ -555,8 +591,8 @@ const buildRecipients = useCallback(() => {
                   {/* Last Name Column */}
                   <div className="space-y-1.5">
                     <Label className="text-xs">Last Name</Label>
-                    <Select 
-                      value={config.lastNameColumn || NONE_VALUE} 
+                    <Select
+                      value={config.lastNameColumn || NONE_VALUE}
                       onValueChange={(val) => updateConfig("lastNameColumn", val === NONE_VALUE ? "" : val)}
                     >
                       <SelectTrigger className="h-9">
@@ -583,8 +619,8 @@ const buildRecipients = useCallback(() => {
                   {/* Unsubscribe Column */}
                   <div className="space-y-1.5">
                     <Label className="text-xs">Unsubscribe Status</Label>
-                    <Select 
-                      value={config.unsubscribeColumn || NONE_VALUE} 
+                    <Select
+                      value={config.unsubscribeColumn || NONE_VALUE}
                       onValueChange={(val) => updateConfig("unsubscribeColumn", val === NONE_VALUE ? "" : val)}
                     >
                       <SelectTrigger className="h-9">
@@ -625,8 +661,8 @@ const buildRecipients = useCallback(() => {
                   </div>
                 )}
 
-                <Button 
-                  onClick={handleNext} 
+                <Button
+                  onClick={handleNext}
                   disabled={!config.emailColumn}
                   className="w-full"
                 >
@@ -652,7 +688,7 @@ const buildRecipients = useCallback(() => {
 
             <div className="bg-muted/50 rounded-lg p-3 text-sm">
               <p className="text-muted-foreground">
-                Sending to <span className="font-semibold text-foreground">{config.recipientCount}</span> recipients 
+                Sending to <span className="font-semibold text-foreground">{config.recipientCount}</span> recipients
                 using column <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{config.emailColumn}</span>
                 {" "}
                 <button onClick={() => setStep(1)} className="text-primary hover:underline text-xs ml-1">
@@ -661,7 +697,7 @@ const buildRecipients = useCallback(() => {
               </p>
               {(config.firstNameColumn || config.lastNameColumn) && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Personalization: 
+                  Personalization:
                   {config.firstNameColumn && <span className="ml-1">{config.firstNameColumn}</span>}
                   {config.firstNameColumn && config.lastNameColumn && <span>,</span>}
                   {config.lastNameColumn && <span className="ml-1">{config.lastNameColumn}</span>}
@@ -681,8 +717,8 @@ const buildRecipients = useCallback(() => {
             <div className="space-y-2">
               <Label>Email Template</Label>
               <div className="flex gap-2">
-                <Select 
-                  value={config.templateId} 
+                <Select
+                  value={config.templateId}
                   onValueChange={(val) => updateConfig("templateId", val)}
                 >
                   <SelectTrigger className="flex-1">
@@ -721,8 +757,8 @@ const buildRecipients = useCallback(() => {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={() => setStep(3)}
                 >
@@ -744,7 +780,7 @@ const buildRecipients = useCallback(() => {
                 <Calendar className="h-4 w-4" />
                 Schedule
               </Button>
-              <Button 
+              <Button
                 onClick={handleStartMerge}
                 disabled={!config.senderName || !config.templateId}
                 size="sm"
@@ -762,8 +798,8 @@ const buildRecipients = useCallback(() => {
           <div className="space-y-4 animate-fade-in">
             <div className="space-y-2">
               <Label>Send from</Label>
-              <Select 
-                value={config.sendFrom} 
+              <Select
+                value={config.sendFrom}
                 onValueChange={(val) => updateConfig("sendFrom", val)}
               >
                 <SelectTrigger>
@@ -782,9 +818,8 @@ const buildRecipients = useCallback(() => {
             <div className="flex items-center justify-between py-2">
               <Label>Sheet filter</Label>
               <div className="flex items-center gap-2">
-                <div className={`h-5 w-5 rounded-full flex items-center justify-center ${
-                  config.sheetFilterEnabled ? 'bg-success text-success-foreground' : 'bg-muted'
-                }`}>
+                <div className={`h-5 w-5 rounded-full flex items-center justify-center ${config.sheetFilterEnabled ? 'bg-success text-success-foreground' : 'bg-muted'
+                  }`}>
                   {config.sheetFilterEnabled && <Check className="h-3 w-3" />}
                 </div>
                 <span className="text-sm">{config.sheetFilterEnabled ? "Enabled" : "Disabled"}</span>

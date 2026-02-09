@@ -39,6 +39,7 @@ interface AuthContextType {
   user: GoogleUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  googleAccessToken?: string;
   loginWithGoogle: (token: string, user: GoogleUser) => void;
   logout: () => void;
   getUserRoles: () => string[];
@@ -62,7 +63,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [loading, setLoading] = useState(true);
-
+const [googleAccessToken, setGoogleAccessToken] = useState<string | undefined>(undefined);
   /* ===================== INIT ===================== */
 
   useEffect(() => {
@@ -74,6 +75,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const decoded = jwtDecode<DecodedToken>(token);
         if (!decoded.exp || decoded.exp * 1000 > Date.now()) {
           setUser(JSON.parse(savedUser));
+           if ((JSON.parse(savedUser) as GoogleUser)?.email) {
+            setGoogleAccessToken(token);
+          }
         } else {
           logout();
         }
@@ -115,6 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("accessToken", token);
     localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
+    setGoogleAccessToken(token); // Save Google access token in sta
   };
 
   /* ===================== ROLES ===================== */
@@ -146,6 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const decoded = jwtDecode<DecodedToken>(token);
+      console.log(decoded,'decoded value')
 
       return {
         recruiter_Id: recruiterId,
