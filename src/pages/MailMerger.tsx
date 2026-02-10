@@ -149,10 +149,13 @@ const CMS = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const handleConnectGmail = () => {
     // Backend handles OAuth redirect
+    // window.location.href = `${API_BASE_URL}/auth/google`;
+    alert( `${API_BASE_URL}/auth/google`)
     window.location.href = `${API_BASE_URL}/auth/google`;
+
   };
 
-  /** ✅ Fetch mail merge jobs */
+  
   const fetchJobs = async () => {
     setLoading(true);
     try {

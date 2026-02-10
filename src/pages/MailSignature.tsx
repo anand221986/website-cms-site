@@ -1,7 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -18,16 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Trash2,
-  Copy,
-  Plus,
-  Pencil,
-  Check,
-  X,
-  Download,
-  Signature,
-} from "lucide-react";
+import { Trash2, Copy, Plus, Pencil, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import PlatformSelector from "@/components/signature/PlatformSelector";
@@ -68,75 +58,6 @@ const INITIAL_FORM: Omit<EmailSignature, "id"> = {
   },
 };
 
-const DUMMY_SIGNATURES: EmailSignature[] = [
-  {
-    id: 1,
-    name: "Rahul",
-    lastName: "Tripathi",
-    designation: "Senior Developer",
-    company: "Acme Corp",
-    phone: "+91 9876543210",
-    mobile: "+91 9876543210",
-    email: "rahul@acme.com",
-    website: "https://acme.com",
-    address: "123 Main Street",
-    logoUrl: "",
-    logoBase64: "",
-    customHTML: "",
-    templateId: "classic",
-    socialLinks: {
-      facebook: "",
-      twitter: "",
-      linkedin: "",
-      instagram: "",
-      youtube: "",
-    },
-  },
-];
-
-/* -------------------------------------------------------------------------- */
-/*                                   HELPERS                                  */
-/* -------------------------------------------------------------------------- */
-
-const getImageSrc = (base64?: string) =>
-  base64?.startsWith("data:image")
-    ? base64
-    : base64
-    ? `data:image/jpeg;base64,${base64}`
-    : "";
-
-const templateHTML = (s: EmailSignature, removeBrand = true) => `
-<table cellpadding="0" cellspacing="0" style="font-family:Arial;font-size:14px;color:#333">
-  <tr>
-    ${
-      s.logoBase64
-        ? `<td style="padding-right:12px">
-            <img src="${getImageSrc(
-              s.logoBase64
-            )}" width="70" style="border-radius:6px"/>
-           </td>`
-        : ""
-    }
-    <td style="border-left:3px solid #2563eb;padding-left:12px">
-      <strong style="font-size:16px">${s.name} ${s.lastName}</strong><br/>
-      ${s.designation}<br/>
-      <span style="color:#2563eb">${s.company}</span><br/><br/>
-      📞 ${s.phone}<br/>
-      ✉️ <a href="mailto:${s.email}">${s.email}</a><br/>
-      ${s.website ? `🌐 <a href="${s.website}">${s.website}</a>` : ""}
-    </td>
-  </tr>
-  ${
-    !removeBrand
-      ? `<tr><td colspan="2" style="font-size:11px;color:#888">Created with YourBrand</td></tr>`
-      : ""
-  }
-</table>
-`;
-
-const generateHTML = (s: EmailSignature) =>
-  s.customHTML || templateHTML(s);
-
 /* -------------------------------------------------------------------------- */
 /*                              MAIN COMPONENT                                */
 /* -------------------------------------------------------------------------- */
@@ -149,39 +70,36 @@ const MailSignaturePage = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [inlineEditId, setInlineEditId] = useState<number | null>(null);
-  const [inlineName, setInlineName] = useState("");
-
   const [platform, setPlatform] = useState("gmail");
-  const [template, setTemplate] = useState("classic");
 
   const isEditing = editingId !== null;
-    const { getUserDetails } = useAuth();
-    const userDetails = getUserDetails();
-    const userId = userDetails?.recruiter_Id;
 
-  /* ------------------------------ DATA LOAD ------------------------------ */
+  const { getUserDetails } = useAuth();
+  const userId = getUserDetails()?.userId;
+
+  /* ------------------------------ LOAD DATA ------------------------------ */
 
   useEffect(() => {
+    if (!userId) return;
+
     const load = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/email-signature/73`);
+        const res = await fetch(`${API_BASE_URL}/email-signature/${userId}`);
         if (!res.ok) throw new Error();
-        const data = await res.json();
+
+        const data: EmailSignature[] = await res.json();
         setSignatures(data);
-        setSelected(data[0]);
+        setSelected(data[0] || null);
       } catch {
-        setSignatures(DUMMY_SIGNATURES);
-        setSelected(DUMMY_SIGNATURES[0]);
+        setSignatures([]);
       }
     };
-    load();
-  }, []);
 
-  /* ------------------------------ FORM LOGIC ----------------------------- */
+    load();
+  }, [userId]);
+
+  /* ------------------------------ HELPERS -------------------------------- */
 
   const resetForm = () => {
     setForm(INITIAL_FORM);
@@ -198,54 +116,67 @@ const MailSignaturePage = () => {
     setErrors(e);
     return Object.keys(e).length === 0;
   };
- const saveSignature = async () => {
-  if (!validate()) return;
 
-  const payload = {
-    ...form,
-    id: isEditing ? editingId! : Date.now(),
-    platform,        // include the selected platform
-    templateId: template, // include the selected template
-    user_id: userId,
-  };
+  /* ------------------------------ SAVE ----------------------------------- */
 
-  if (isEditing) {
-    setSignatures((prev) =>
-      prev.map((s) => (s.id === editingId ? payload : s))
-    );
-    toast.success("Signature updated");
-  } else {
-    setSignatures((prev) => [...prev, payload]);
+  const saveSignature = async () => {
+    if (!validate()) return;
+    if (!userId) return toast.error("User not authenticated");
 
     try {
-      const data = await apiSaveSignature(payload);
-      console.log("save Signature:", data);
-      toast.success("Signature created");
-    } catch (err) {
-      // handle 403 (Pro limitation)
-      if (err?.response?.status === 403 || err?.status === 403) {
-        toast.error("Upgrade to Pro to save multiple signatures.");
-      } else {
-        toast.error("Failed to save the signature");
-      }
-        toast.error("Failed to save the signature");
+      const {
+      id,
+      created_at,
+      updated_at,
+      status,
+      message,
+      result,
+      ...cleanForm
+    } = form as any;
+      const payload = {
+      ...cleanForm,
+      platform,
+      user_id: userId,
+      id: editingId ?? undefined, // only for update
+    };
+
+      // ✅ backend must return saved record
+    const response = await apiSaveSignature(payload);
+const saved: EmailSignature = response.result;
+setSignatures((prev) =>
+  isEditing
+    ? prev.map((s) => (s.id === saved.id ? saved : s))
+    : [saved, ...prev]
+);
+
+setSelected(saved)
+      toast.success(isEditing ? "Signature updated" : "Signature created");
+      resetForm();
+    } catch (err: any) {
+       const status =
+      err?.response?.status || err?.status;
+
+    const message =
+      err?.response?.data?.message || "Failed to save signature";
+
+    if (status === 403) {
+      toast.error(message); // ✅ backend message
+      return;
     }
 
- 
-  }
+    toast.error(message);
+    }
+  };
 
-  console.log("Saved Signature:", JSON.stringify(payload, null, 2));
-  resetForm();
-};
   /* ------------------------------ ACTIONS -------------------------------- */
 
   const copyHTML = (s: EmailSignature) => {
-    navigator.clipboard.writeText(generateHTML(s));
+    navigator.clipboard.writeText(s.customHTML || "");
     toast.success("HTML copied");
   };
 
   const exportHTML = (s: EmailSignature) => {
-    const blob = new Blob([generateHTML(s)], { type: "text/html" });
+    const blob = new Blob([s.customHTML || ""], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -269,8 +200,7 @@ const MailSignaturePage = () => {
           <CardContent className="flex justify-between p-4">
             <h2 className="font-semibold text-lg">Email Signature Generator</h2>
             <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Signature
+              <Plus className="w-4 h-4 mr-2" /> Add Signature
             </Button>
           </CardContent>
         </Card>
@@ -296,11 +226,14 @@ const MailSignaturePage = () => {
                     <TableCell>{s.email}</TableCell>
                     <TableCell>{s.phone}</TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button size="icon" onClick={() => {
-                        setForm(s);
-                        setEditingId(s.id);
-                        setDialogOpen(true);
-                      }}>
+                      <Button
+                        size="icon"
+                        onClick={() => {
+                          setForm(s);
+                          setEditingId(s.id);
+                          setDialogOpen(true);
+                        }}
+                      >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button size="icon" onClick={() => copyHTML(s)}>
@@ -324,16 +257,16 @@ const MailSignaturePage = () => {
           </CardContent>
         </Card>
 
-        {/* CREATE / EDIT */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen} > 
-          <DialogContent className="max-w-6xl overflow-hidden filter-none backdrop-filter-none">
+        {/* DIALOG */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-6xl">
             <DialogHeader>
               <DialogTitle>
                 {isEditing ? "Edit Signature" : "Create Signature"}
               </DialogTitle>
             </DialogHeader>
 
-            <ScrollArea className="h-[70vh] pr-4"  >
+            <ScrollArea className="h-[70vh] pr-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <PlatformSelector
@@ -349,14 +282,15 @@ const MailSignaturePage = () => {
 
                 <div className="border rounded-md p-4">
                   <TemplateCarousel
-                    selectedTemplate={template}
-                    onSelect={setTemplate}
+                    selectedTemplate={form.templateId}
+                    onSelect={(id) =>
+                      setForm((prev) => ({ ...prev, templateId: id }))
+                    }
                   />
                   <SignaturePreview
                     signature={{
                       ...(form as EmailSignature),
-                      id: editingId || 0,
-                      templateId: template,
+                      id: editingId ?? 0,
                     }}
                   />
                 </div>

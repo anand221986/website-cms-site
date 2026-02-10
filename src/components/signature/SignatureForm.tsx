@@ -27,7 +27,7 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
   };
   const { getUserDetails } = useAuth();
   const userDetails = getUserDetails();
-  const userId = userDetails?.recruiter_Id;
+  const userId = userDetails?.userId;
   return (
     <div className="bg-card rounded-xl p-6 shadow-sm border">
       <h2 className="text-lg font-semibold text-center mb-6">
