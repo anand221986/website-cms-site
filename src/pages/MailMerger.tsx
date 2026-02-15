@@ -85,44 +85,15 @@ Cheers,
 {{company}} Team`,
   },
 ];
-
-// const mockJobs: MergeJob[] = [
-//   {
-//     id: 5,
-//     templateName: "Interview Invitation",
-//     total: 300,
-//     processed: 0,
-//     status: "pending",
-//     createdAt: "27/12/2025, 15:19:35",
-//   },
-//   {
-//     id: 3,
-//     templateName: "Password Reset",
-//     total: 1000,
-//     processed: 430,
-//     status: "processing",
-//     createdAt: "27/12/2025, 14:59:35",
-//   },
-//   {
-//     id: 7,
-//     templateName: "Password Reset",
-//     total: 400,
-//     processed: 120,
-//     status: "failed",
-//     createdAt: "27/12/2025, 11:29:35",
-//   },
-// ];
-
 interface MailMergeJob {
   id: number;
   template_id: number;
-  template_name:string;
+  template_name: string;
   total: number;
   processed: number;
-status: "completed" | "pending" | "processing" | "failed";
+  status: "completed" | "pending" | "processing" | "failed";
   created_at: string;
 }
-
 interface MailTemplate {
   id: number;
   name: string;
@@ -132,30 +103,40 @@ interface ApiResponse<T> {
   message: string;
   result: T;
 }
-
 const CMS = () => {
   const [activeTab, setActiveTab] =
     useState<"pages" | "template">("pages");
-
   const [jobs, setJobs] = useState<MailMergeJob[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-
   const [file, setFile] = useState<File | null>(null);
   const [templateId, setTemplateId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [templates, setTemplates] = useState([]);
+  const [gmailConnected, setGmailConnected] = useState<boolean | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const handleConnectGmail = () => {
-    // Backend handles OAuth redirect
-    // window.location.href = `${API_BASE_URL}/auth/google`;
-    alert( `${API_BASE_URL}/auth/google`)
     window.location.href = `${API_BASE_URL}/auth/google`;
-
+  };
+  const checkGmailStatus = async () => {
+    try {
+       const token = localStorage.getItem("accessToken");
+      const { data } = await axios.get(
+        `${API_BASE_URL}/auth/google/status`,
+        {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+      );
+      setGmailConnected(data.connected);
+    } catch (error) {
+      console.error("Failed to check Gmail status", error);
+      setGmailConnected(false);
+    }
   };
 
-  
   const fetchJobs = async () => {
     setLoading(true);
     try {
@@ -171,11 +152,11 @@ const CMS = () => {
   };
 
   useEffect(() => {
-    if (activeTab === "template") 
-    {
-        fetchJobs();
-    fetchTemplates();
-}
+    if (activeTab === "template") {
+      fetchJobs();
+      fetchTemplates();
+      checkGmailStatus();
+    }
   }, [activeTab]);
 
   const toggleOne = (id: number) => {
@@ -228,29 +209,29 @@ const CMS = () => {
       setFile(null);
       setTemplateId("");
       fetchJobs();
-     fetchTemplates();
+      fetchTemplates();
     } catch {
       toast.error("CSV upload failed");
     } finally {
       setUploading(false);
     }
-   
+
   };
 
- const fetchTemplates = async () => {
-  setLoading(true);
-  try {
-    const { data } = await axios.get<ApiResponse<MailTemplate[]>>(
-      `${API_BASE_URL}/email/mail-templates`
-    );
-    setTemplates(data.result);
-  } catch (error) {
-    toast.error("Failed to load mail templates");
-  } finally {
-    setLoading(false);
-  }
-};
- const handleStartMerge = () => {
+  const fetchTemplates = async () => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get<ApiResponse<MailTemplate[]>>(
+        `${API_BASE_URL}/email/mail-templates`
+      );
+      setTemplates(data.result);
+    } catch (error) {
+      toast.error("Failed to load mail templates");
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleStartMerge = () => {
     if (!selectedTemplate) {
       toast.error("Please select a template");
       return;
@@ -261,107 +242,61 @@ const CMS = () => {
     }
 
     const template = mockTemplates.find((t) => t.id === selectedTemplate);
-    // const newJob: MergeJob = {
-    //   id: Math.max(...jobs.map((j) => j.id), 0) + 1,
-    //   templateName: template?.name || "Unknown",
-    //   total: Math.floor(Math.random() * 500) + 100,
-    //   processed: 0,
-    //   status: "pending",
-    //   createdAt: new Date().toLocaleString(),
-    // };
-
-    // setJobs((prev) => [newJob, ...prev]);
-    setSelectedTemplate("");
+     setSelectedTemplate("");
     setSelectedFile(null);
     toast.success("Mail merge job created successfully!");
   };
 
   return (
     <Layout>
-   <div className="p-6">
-        {/* <h1 className="text-3xl font-bold text-slate-800">
-          CMS Management
-        </h1> */}
-
-        <Tabs
+      <div className="p-6">
+ <Tabs
           value={activeTab}
           onValueChange={v => setActiveTab(v as any)}
         >
-           <div className="flex items-center justify-between mb-6">
-          <TabsList className="bg-muted">
-            <TabsTrigger value="pages">Mail Templates</TabsTrigger>
-            <TabsTrigger value="template">Mail Merge Jobs</TabsTrigger>
-          </TabsList>
-         
-           {activeTab === "template" && (
-           <div className="flex items-center gap-4">
-                  {/* <Select
-    value={templateId}
-    onValueChange={(value) => setTemplateId(value)}
-  >
-    <SelectTrigger className="w-48">
-      <SelectValue placeholder="Select Template" />
-    </SelectTrigger>
-    <SelectContent>
-      {templates.map((template) => (
-        <SelectItem
-          key={template.id}
-          value={template.id.toString()}
-        >
-          {template.name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={e =>
-                    setFile(e.target.files?.[0] || null)
-                  }
-                  className="w-60"
-                />
-                {/* <Button
-                  onClick={handleUpload}
-                  disabled={uploading}
-                   variant="outline"
-          className="gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  {uploading ? "Uploading..." : "Upload CSV"}
-                </Button> */}
+          <div className="flex items-center justify-between mb-6">
+            <TabsList className="bg-muted">
+              <TabsTrigger value="pages">Mail Templates</TabsTrigger>
+              <TabsTrigger value="template">Mail Merge Jobs</TabsTrigger>
+            </TabsList>
 
-                   <div className="flex flex-wrap items-center gap-4">
-                {/* <TemplateSelector
-                  templates={mockTemplates}
-                  selectedTemplate={selectedTemplate}
-                  onSelect={setSelectedTemplate}
-                />
-                <ContactUploader
-                  selectedFile={selectedFile}
-                  onFileSelect={setSelectedFile}
-                  onClear={() => setSelectedFile(null)}
-                /> */}
-                 <button
-      onClick={handleConnectGmail}
-      className="px-4 py-2 bg-red-600 text-white rounded"
-    >
-      Connect Gmail
-    </button>
-                <StartMergeDialog 
-                  templates={mockTemplates} 
-                  onStartMerge={handleStartMerge}
-                >
-                  <Button className="gap-2">
-                    <Play className="w-4 h-4" />
-                    Start Merge
-                  </Button>
-                </StartMergeDialog>
+            {activeTab === "template" && (
+              <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* <button
+                    onClick={handleConnectGmail}
+                    className="px-4 py-2 bg-red-600 text-white rounded"
+                  >
+                    Connect Gmail
+                  </button> */}
+                  {gmailConnected === false && (
+  <button
+    onClick={handleConnectGmail}
+    className="px-4 py-2 bg-red-600 text-white rounded"
+  >
+    Connect Gmail
+  </button>
+)}
+
+{gmailConnected === true && (
+  <div className="px-4 py-2 bg-green-100 text-green-700 rounded">
+    Gmail Connected ✓
+  </div>
+)}
+                  <StartMergeDialog
+                    templates={mockTemplates}
+                    onStartMerge={handleStartMerge}
+                  >
+                    <Button className="gap-2">
+                      <Play className="w-4 h-4" />
+                      Start Merge
+                    </Button>
+                  </StartMergeDialog>
+                </div>
+
               </div>
-               
-              </div>
-              )}
-              </div>
+            )}
+          </div>
 
           <TabsContent value="pages">
             <CMSSettingsTabs />
@@ -372,86 +307,86 @@ const CMS = () => {
               <div className="p-4 border-b">
               <h2 className="text-lg font-semibold">Mail Merge Job History</h2>
             </div> */}
-              {/* ✅ Upload CSV */}
+            {/* ✅ Upload CSV */}
 
             {/* </CardHeader> */}
-             <div className="bg-card rounded-lg border">
-            <div className="p-4 border-b">
-              <h2 className="text-lg font-semibold">Mail Merge Job History</h2>
-            </div>
+            <div className="bg-card rounded-lg border">
+              <div className="p-4 border-b">
+                <h2 className="text-lg font-semibold">Mail Merge Job History</h2>
+              </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <Checkbox
-                      checked={
-                        jobs.length > 0 &&
-                        jobs.every(j => selected.has(j.id))
-                      }
-                      onCheckedChange={toggleAll}
-                    />
-                  </TableHead>
-                  <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">ID</TableHead>
-                  <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Template Name</TableHead>
-                  <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Total</TableHead>
-                  <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Processed</TableHead>
-                  <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Status</TableHead>
-                  <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Created At</TableHead>
-                  <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Action</TableHead>
-                </TableRow>
-              </TableHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <Checkbox
+                        checked={
+                          jobs.length > 0 &&
+                          jobs.every(j => selected.has(j.id))
+                        }
+                        onCheckedChange={toggleAll}
+                      />
+                    </TableHead>
+                    <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">ID</TableHead>
+                    <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Template Name</TableHead>
+                    <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Total</TableHead>
+                    <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Processed</TableHead>
+                    <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Status</TableHead>
+                    <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Created At</TableHead>
+                    <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
 
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center">
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : jobs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center">
-                      No jobs found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  jobs.map(job => (
-                    <TableRow key={job.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selected.has(job.id)}
-                          onCheckedChange={() => toggleOne(job.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="py-4 px-4 text-sm">{job.id}</TableCell>
-                      <TableCell className="py-4 px-4 text-sm font-medium">{job.template_name}</TableCell>
-                      <TableCell className="py-4 px-4 text-sm">{job.total.toLocaleString()}</TableCell>
-                      <TableCell className="py-4 px-4 text-sm text-primary">{job.processed}</TableCell>
-                      <TableCell className="py-4 px-4">  <StatusBadge status={job.status} /></TableCell>
-                      <TableCell>
-                        {new Date(job.created_at).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="py-4 px-4">
-                        <Button
-                        variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(job.id)}
-                           className="text-muted-foreground hover:text-destructive"
-                        >
-                         <Trash2 className="w-4 h-4 mr-1" />
-                          Delete
-                        </Button>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center">
+                        Loading...
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : jobs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center">
+                        No jobs found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    jobs.map(job => (
+                      <TableRow key={job.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selected.has(job.id)}
+                            onCheckedChange={() => toggleOne(job.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="py-4 px-4 text-sm">{job.id}</TableCell>
+                        <TableCell className="py-4 px-4 text-sm font-medium">{job.template_name}</TableCell>
+                        <TableCell className="py-4 px-4 text-sm">{job.total.toLocaleString()}</TableCell>
+                        <TableCell className="py-4 px-4 text-sm text-primary">{job.processed}</TableCell>
+                        <TableCell className="py-4 px-4">  <StatusBadge status={job.status} /></TableCell>
+                        <TableCell>
+                          {new Date(job.created_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="py-4 px-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(job.id)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </TabsContent>
         </Tabs>
-        
+
       </div>
     </Layout>
   );

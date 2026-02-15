@@ -1,106 +1,140 @@
+import { Moon, Sun } from "lucide-react";
 import { useState } from "react";
-import { Moon, Sun, Copy, Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { EmailSignature } from "@/types/signature";
-import { toast } from "sonner";
-import { motion } from "framer-motion";
+import type { SignatureData } from "./SignatureForm";
 
 interface SignaturePreviewProps {
-  signature: Partial<EmailSignature>;
+  data: SignatureData;
+  template: string;
 }
 
-const SignaturePreview = ({ signature }: SignaturePreviewProps) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+const SignaturePreview = ({ data, template }: SignaturePreviewProps) => {
+  const [dark, setDark] = useState(false);
 
-  const generateHTML = () => {
-    const s = signature;
-    const fullName = [s.name, s.lastName].filter(Boolean).join(' ') || 'Your Name';
-    
-    return `
-<table cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif; font-size: 14px; color: ${isDarkMode ? '#e5e5e5' : '#333333'};">
-  <tr>
-    ${s.logoBase64 ? `
-    <td style="padding-right: 15px; vertical-align: top;">
-      <img src="${s.logoBase64}" width="80" height="80" style="border-radius: 8px; display: block;" alt="Photo" />
-    </td>` : `
-    <td style="padding-right: 15px; vertical-align: top;">
-      <div style="width: 80px; height: 80px; background: ${isDarkMode ? '#374151' : '#e5e7eb'}; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: ${isDarkMode ? '#9ca3af' : '#6b7280'};">
-        Photo<br/>156x156
+  const name = `${data.firstName || "Your"} ${data.lastName || "Name"}`;
+  const job = data.jobTitle || "Job Title";
+  const company = data.company || "Company";
+  const email = data.email || "email@company.com";
+  const phone = data.phone || "(800) 555-0199";
+  const mobile = data.mobile || "(800) 555-0299";
+  const website = data.website || "www.company.com";
+  const address = data.address || "Street, City, Zip Code, Country";
+
+  const bgColor = dark ? "hsl(220, 20%, 12%)" : "hsl(0, 0%, 100%)";
+  const textColor = dark ? "hsl(0, 0%, 90%)" : "hsl(220, 20%, 10%)";
+  const mutedColor = dark ? "hsl(0, 0%, 60%)" : "hsl(0, 0%, 45%)";
+  const accentColor = "hsl(210, 100%, 45%)";
+
+  // ✅ Avatar component
+  const Avatar = ({ size = 64 }: { size?: number }) => {
+    const initials = `${data.firstName?.[0] || "J"}${data.lastName?.[0] || "D"}`;
+    return data.logoBase64 ? (
+      <img
+        src={data.logoBase64}
+        alt="Logo"
+        className="object-cover rounded-full"
+        style={{ width: size, height: size }}
+      />
+    ) : (
+      <div
+        className="flex items-center justify-center rounded-full text-white font-bold"
+        style={{
+          width: size,
+          height: size,
+          backgroundColor: accentColor,
+          fontSize: size / 2.5,
+        }}
+      >
+        {initials}
       </div>
-    </td>`}
-    <td style="vertical-align: top;">
-      <div style="border-left: 3px solid #14b8a6; padding-left: 15px;">
-        <strong style="font-size: 16px; color: ${isDarkMode ? '#ffffff' : '#1f2937'};">${fullName}</strong><br/>
-        <span style="color: ${isDarkMode ? '#d1d5db' : '#4b5563'};">${s.designation || 'Job Title'} | ${s.company || 'Company'}</span><br/><br/>
-        ${s.phone ? `<strong>P:</strong> ${s.phone}` : ''}
-        ${s.mobile ? ` | <strong>M:</strong> ${s.mobile}` : ''}<br/>
-        <strong>E:</strong> <a href="mailto:${s.email || 'email@company.com'}" style="color: #14b8a6;">${s.email || 'email@company.com'}</a>
-        ${s.website ? ` | <a href="${s.website}" style="color: #14b8a6;">${s.website.replace(/^https?:\/\//, '')}</a>` : ''}<br/>
-        ${s.address ? `<span style="color: ${isDarkMode ? '#9ca3af' : '#6b7280'};">${s.address}</span>` : ''}
-        <br/><br/>
-        <div style="display: flex; gap: 8px;">
-          ${s.socialLinks?.facebook ? `<a href="${s.socialLinks.facebook}"><img src="https://cdn-icons-png.flaticon.com/24/733/733547.png" width="20" height="20" alt="Facebook"/></a>` : ''}
-          ${s.socialLinks?.twitter ? `<a href="${s.socialLinks.twitter}"><img src="https://cdn-icons-png.flaticon.com/24/733/733579.png" width="20" height="20" alt="Twitter"/></a>` : ''}
-          ${s.socialLinks?.linkedin ? `<a href="${s.socialLinks.linkedin}"><img src="https://cdn-icons-png.flaticon.com/24/733/733561.png" width="20" height="20" alt="LinkedIn"/></a>` : ''}
-          ${s.socialLinks?.instagram ? `<a href="${s.socialLinks.instagram}"><img src="https://cdn-icons-png.flaticon.com/24/733/733558.png" width="20" height="20" alt="Instagram"/></a>` : ''}
-          ${s.socialLinks?.youtube ? `<a href="${s.socialLinks.youtube}"><img src="https://cdn-icons-png.flaticon.com/24/733/733646.png" width="20" height="20" alt="YouTube"/></a>` : ''}
-        </div>
-      </div>
-    </td>
-  </tr>
-</table>`;
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generateHTML());
-    toast.success("Signature HTML copied to clipboard!");
-  };
-
-  const downloadHTML = () => {
-    const html = generateHTML();
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `email-signature.html`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Signature downloaded!");
+    );
   };
 
   return (
-    <div className="bg-card rounded-xl shadow-sm border overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="font-semibold">Signature preview</h3>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          className="gap-2"
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-foreground">Signature preview</h2>
+        <button
+          onClick={() => setDark(!dark)}
+          className="flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
         >
-          {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {isDarkMode ? 'Light' : 'Dark'} mode preview
-        </Button>
+          {dark ? <Sun size={16} /> : <Moon size={16} />}
+          {dark ? "Light" : "Dark"} mode preview
+        </button>
       </div>
 
-      <motion.div
-        layout
-        className={`p-6 min-h-[200px] transition-colors duration-300 ${
-          isDarkMode ? 'preview-container dark-mode' : 'preview-container'
-        }`}
+      <div
+        className="rounded-lg border p-6 transition-colors duration-300"
+        style={{ backgroundColor: bgColor }}
       >
-        <div dangerouslySetInnerHTML={{ __html: generateHTML() }} />
-      </motion.div>
-
-      <div className="flex gap-3 p-4 border-t bg-muted/30">
-        <Button onClick={copyToClipboard} className="flex-1 gap-2">
-          <Copy className="w-4 h-4" />
-          Copy HTML
-        </Button>
-        <Button onClick={downloadHTML} variant="outline" className="flex-1 gap-2">
-          <Download className="w-4 h-4" />
-          Download
-        </Button>
+        {template === "modern" ? (
+          <div className="text-center space-y-2">
+            <div className="mx-auto">
+              <Avatar size={64} />
+            </div>
+            <div className="font-bold text-lg" style={{ color: textColor }}>{name}</div>
+            <div className="text-sm" style={{ color: accentColor }}>{job} | {company}</div>
+            <div className="h-px w-16 mx-auto" style={{ backgroundColor: accentColor }} />
+            <div className="text-xs space-y-0.5" style={{ color: mutedColor }}>
+              <p>{email}</p>
+              <p>{phone} | {mobile}</p>
+              <p>{website}</p>
+            </div>
+          </div>
+        ) : template === "compact" ? (
+          <div className="flex items-center gap-3">
+            <Avatar size={48} />
+            <div>
+              <span className="font-bold text-sm" style={{ color: textColor }}>{name}</span>
+              <span className="text-sm" style={{ color: mutedColor }}> · {job} · {company}</span>
+              <div className="text-xs mt-0.5" style={{ color: mutedColor }}>
+                {phone} | {email} | {website}
+              </div>
+            </div>
+          </div>
+        ) : template === "elegant" ? (
+          <div className="flex items-start gap-4">
+            <Avatar size={56} />
+            <div className="space-y-1">
+              <div className="font-bold" style={{ color: textColor }}>{name}</div>
+              <div className="text-sm italic" style={{ color: "hsl(280,60%,50%)" }}>{job}</div>
+              <div className="text-xs space-y-0.5" style={{ color: mutedColor }}>
+                <p>{company} · {address}</p>
+                <p>✉ {email} · ☎ {phone}</p>
+                <p style={{ color: "hsl(280,60%,50%)" }}>{website}</p>
+              </div>
+            </div>
+          </div>
+        ) : template === "bold" ? (
+          <div className="p-3 rounded-md" style={{ backgroundColor: dark ? "hsl(210,80%,15%)" : "hsl(210,80%,20%)" }}>
+            <div className="flex items-center gap-4">
+              <Avatar size={56} />
+              <div>
+                <div className="font-bold text-white">{name}</div>
+                <div className="text-sm" style={{ color: "hsl(0,80%,70%)" }}>{job}</div>
+                <div className="text-xs text-white/70 mt-1">
+                  {email} · {phone}
+                </div>
+                <div className="text-xs" style={{ color: "hsl(0,80%,70%)" }}>{website}</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Classic */
+          <div className="flex items-start gap-4">
+            <Avatar size={56} />
+            <div className="border-l-2 pl-4 space-y-1" style={{ borderColor: accentColor }}>
+              <div className="font-bold" style={{ color: textColor }}>{name}</div>
+              <div className="text-sm" style={{ color: accentColor }}>{job} | {company}</div>
+              <div className="text-xs space-y-0.5" style={{ color: mutedColor }}>
+                <p><span style={{ color: accentColor }}>Phone:</span> {phone} <span style={{ color: accentColor }}>Mobile:</span> {mobile}</p>
+                <p><span style={{ color: accentColor }}>Email:</span> {email}</p>
+                <p>{company}</p>
+                <p>{address}</p>
+                <p style={{ color: accentColor }}>{website}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

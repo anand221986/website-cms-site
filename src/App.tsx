@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { lazy, Suspense } from "react";
 const GoogleSuccess = lazy(() => import("./pages/GoogleSuccess"));
+const ConnectSuccess = lazy(() => import("./pages/ConnectSuccess"));
 import Index from "./pages/Index";
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -93,6 +94,8 @@ const App = () => (
                   }
                 />
                 <Route path="/google-success" element={<GoogleSuccess />} />
+                <Route path="/connect-success" element={<ConnectSuccess />} />
+                
 
                 <Route path="*" element={<NotFound />} />
 

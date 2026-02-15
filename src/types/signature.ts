@@ -1,5 +1,6 @@
 export interface EmailSignature {
   id: number;
+  is_default?: boolean;
   name: string;
   lastName: string;
   designation: string;
@@ -55,3 +56,20 @@ export const INITIAL_SIGNATURE: Omit<EmailSignature, 'id'> = {
   customHTML: '',
   socialLinks: {},
 };
+
+
+export interface TemplateConfig {
+  id: string;
+  name: string;
+  accent: string;
+  layout: "classic" | "modern" | "elegant" | "bold" | "minimal" | "creative";
+}
+
+export const TEMPLATES: TemplateConfig[] = [
+  { id: "classic", name: "Classic", accent: "hsl(215,80%,50%)", layout: "classic" },
+  { id: "modern", name: "Modern", accent: "hsl(160,60%,42%)", layout: "modern" },
+  { id: "elegant", name: "Elegant", accent: "hsl(340,65%,50%)", layout: "elegant" },
+  { id: "bold", name: "Bold", accent: "hsl(25,95%,55%)", layout: "bold" },
+  { id: "minimal", name: "Minimal", accent: "hsl(220,15%,30%)", layout: "minimal" },
+  { id: "creative", name: "Creative", accent: "hsl(270,60%,55%)", layout: "creative" },
+];

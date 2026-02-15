@@ -29,26 +29,30 @@ const PlatformSelector = ({ selectedPlatform, onSelect }: PlatformSelectorProps)
       <h2 className="text-lg text-foreground font-semibold text-center mb-4">
         1. Choose email platform
       </h2>
-      
+
       <div className="grid grid-cols-4 gap-3">
-        {PLATFORMS.map((platform) => (
-          <motion.button
-            key={platform.id}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => onSelect(platform.id)}
-            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors transform-gpu${
-              selectedPlatform === platform.id
-                ? 'border-secondary bg-secondary/10'
-                : 'border-border hover:border-secondary/50'
-            }`}
-          >
-            <span className="text-2xl">{platform.icon}</span>
-            <span className="text-xs font-medium text-center leading-tight">
-              {platform.name}
-            </span>
-          </motion.button>
-        ))}
+        {PLATFORMS.map((platform) => {
+          const isSelected = selectedPlatform === platform.id;
+
+          return (
+            <motion.button
+              key={platform.id}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onSelect(platform.id)}
+              className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors transform-gpu
+                ${isSelected 
+                  ? "bg-gray-800 text-white border-gray-600"  // dark mode style for selected
+                  : "border-border hover:border-secondary/50 bg-white text-black" // default style
+                }`}
+            >
+              <span className="text-2xl">{platform.icon}</span>
+              <span className="text-xs font-medium text-center leading-tight">
+                {platform.name}
+              </span>
+            </motion.button>
+          );
+        })}
       </div>
 
       <p className="text-center mt-4 text-xs text-muted-foreground">

@@ -5,6 +5,18 @@ import FormSection from "./FormSection";
 import { EmailSignature } from "@/types/signature";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+export interface SignatureData {
+  firstName: string;
+  lastName: string;
+  jobTitle: string;
+  email: string;
+  phone: string;
+  mobile: string;
+  company: string;
+  website: string;
+  address: string;
+  logoBase64:string;
+}
 
 interface SignatureFormProps {
   form: Partial<EmailSignature>;
@@ -28,14 +40,37 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
   const { getUserDetails } = useAuth();
   const userDetails = getUserDetails();
   const userId = userDetails?.userId;
+  const subscribed = userDetails?.subscription;
   return (
     <div className="bg-card rounded-xl p-6 shadow-sm border">
-      <h2 className="text-lg font-semibold text-center mb-6">
-        3. Enter signature details
-      </h2>
+     <h2 className="text-lg font-semibold text-center mb-6">
+  3. Enter signature details
+</h2>
+
+{/* Default Signature Option */}
+<div className="mb-6 flex items-center justify-between bg-muted/40 p-3 rounded-lg border">
+  <label className="flex items-center gap-2 text-sm font-medium">
+    <input
+      type="checkbox"
+      checked={form.is_default || false}
+      onChange={(e) =>
+        setForm({ ...form, is_default: e.target.checked })
+      }
+      className="accent-primary"
+    />
+    Set as Default Signature
+  </label>
+
+  {form.is_default && (
+    <span className="text-xs text-green-600 font-medium">
+      ⭐ This will be used automatically
+    </span>
+  )}
+</div>
 
       <div className="space-y-4">
         {/* Personal Data */}
+       
         <FormSection 
           title="Personal Data" 
           icon={<User className="w-4 h-4" />}
@@ -143,10 +178,10 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
         </FormSection>
 
         {/* Graphics */}
-        <FormSection 
+       {subscribed === "pro" && (  <FormSection 
           title="Graphics" 
           icon={<ImageIcon className="w-4 h-4" />}
-        >
+        > 
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Profile Photo / Logo</Label>
@@ -211,6 +246,7 @@ const SignatureForm = ({ form, setForm, errors }: SignatureFormProps) => {
             </div>
           </div>
         </FormSection>
+        )}
 
         {/* Style */}
         <FormSection 

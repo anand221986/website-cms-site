@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FileText, Mail, AlignLeft } from "lucide-react";
+import RichTextEditor from '@/components/RichTextEditor'
 
 interface AddTemplateDialogProps {
   open: boolean;
@@ -123,12 +124,13 @@ const AddTemplateDialog = ({
               <AlignLeft className="h-4 w-4 text-muted-foreground" />
               Email Body
             </Label>
-            <Textarea
+            {/* <Textarea
               placeholder="Write your email content..."
               className="min-h-[140px]"
               value={body}
               onChange={(e) => setBody(e.target.value)}
-            />
+            /> */}
+            <RichTextEditor value={body} onChange={setBody} placeholder="Write your email body here..." />
           </div>
 
           {/* Actions */}

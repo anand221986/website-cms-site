@@ -19,6 +19,7 @@ type DecodedToken = {
   role?: string | string[];
   "cognito:groups"?: string[];
   exp?: number;
+  subscription?:string;
 };
 
 type GoogleUser = {
@@ -33,6 +34,7 @@ type UserDetails = {
   email: string;
   roles: string;
   userId: number;
+  subscription:string;
 };
 
 interface AuthContextType {
@@ -161,6 +163,7 @@ const [googleAccessToken, setGoogleAccessToken] = useState<string | undefined>(u
           ? decoded.role.join(", ")
           : decoded.role || "",
         userId: decoded.sub,
+        subscription:decoded.subscription,
       };
     } catch {
       return null;
