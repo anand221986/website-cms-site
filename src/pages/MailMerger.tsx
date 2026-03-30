@@ -2,10 +2,11 @@ import Layout from "@/components/Layout";
 import CMSSettingsTabs from "@/pages/CmsDashboardTabs";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Upload } from "lucide-react";
+import { Eye,Trash2, Upload } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 import { StatusBadge } from "./StatusBadge";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Tabs,
   TabsContent,
@@ -91,7 +92,9 @@ interface MailMergeJob {
   template_name: string;
   total: number;
   processed: number;
+  scheduled_at:string;
   status: "completed" | "pending" | "processing" | "failed";
+
   created_at: string;
 }
 interface MailTemplate {
@@ -104,6 +107,7 @@ interface ApiResponse<T> {
   result: T;
 }
 const CMS = () => {
+   const navigate = useNavigate();
   const [activeTab, setActiveTab] =
     useState<"pages" | "template">("pages");
   const [jobs, setJobs] = useState<MailMergeJob[]>([]);
@@ -136,7 +140,23 @@ const CMS = () => {
       setGmailConnected(false);
     }
   };
+const handleViewRecipients = async (jobId: number) => {
+   navigate(`/mail-receipent/${jobId}`);
+  // try {
+  //   const { data } = await axios.get(
+  //     `${API_BASE_URL}/email/merge-recipients/${jobId}`
+  //   );
 
+  //   console.log("Recipients:", data.result);
+
+  //   // 👉 For now just log
+  //   // Later you can show in modal/table
+  //   toast.success(`Loaded ${data.result.length} records`);
+  // } catch (error) {
+  //   console.error(error);
+  //   toast.error("Failed to fetch recipients");
+  // }
+};
   const fetchJobs = async () => {
     setLoading(true);
     try {
@@ -150,6 +170,7 @@ const CMS = () => {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     if (activeTab === "template") {
@@ -283,10 +304,16 @@ const CMS = () => {
     Gmail Connected ✓
   </div>
 )}
-                  <StartMergeDialog
-                    templates={mockTemplates}
-                    onStartMerge={handleStartMerge}
-                  >
+                <StartMergeDialog
+  templates={templates}
+  onStartMerge={() => {
+    fetchJobs(); // only refresh
+  }}
+  onSuccessRedirect={() => {
+    fetchJobs();
+    setActiveTab("template");
+  }}
+>
                     <Button className="gap-2">
                       <Play className="w-4 h-4" />
                       Start Merge
@@ -331,6 +358,7 @@ const CMS = () => {
                     <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Template Name</TableHead>
                     <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Total</TableHead>
                     <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Processed</TableHead>
+                    <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Scheduled Time</TableHead>
                     <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Status</TableHead>
                     <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Created At</TableHead>
                     <TableHead className="py-3 px-4 text-left text-sm font-medium text-primary">Action</TableHead>
@@ -363,7 +391,8 @@ const CMS = () => {
                         <TableCell className="py-4 px-4 text-sm font-medium">{job.template_name}</TableCell>
                         <TableCell className="py-4 px-4 text-sm">{job.total.toLocaleString()}</TableCell>
                         <TableCell className="py-4 px-4 text-sm text-primary">{job.processed}</TableCell>
-                        <TableCell className="py-4 px-4">  <StatusBadge status={job.status} /></TableCell>
+                        <TableCell className="py-4 px-4 text-sm text-primary">{job.scheduled_at}</TableCell>
+                        <TableCell className="py-4 px-4">  <StatusBadge status={job.status.toLowerCase() as any} /></TableCell>
                         <TableCell>
                           {new Date(job.created_at).toLocaleString()}
                         </TableCell>
@@ -377,6 +406,15 @@ const CMS = () => {
                             <Trash2 className="w-4 h-4 mr-1" />
                             Delete
                           </Button>
+                            <Button
+    variant="ghost"
+    size="sm"
+    onClick={() => handleViewRecipients(job.id)}
+    className="text-muted-foreground  "
+  >
+    <Eye className="w-4 h-4 mr-1" />
+    View  
+  </Button>
                         </TableCell>
                       </TableRow>
                     ))

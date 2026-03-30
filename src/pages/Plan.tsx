@@ -19,9 +19,11 @@ type FeatureAccess = {
 const UsageLimits = () => {
   const { getUserDetails } = useAuth();
   const user = getUserDetails();
+  console.log(user)
   const userRole = user?.roles?.toLowerCase() || "free";
   const subscribed = !!user?.subscription;
   const currentPlan = user?.subscription || "free";
+    console.log(currentPlan,'currentplan')
   
 const handleUpgrade = async (planName: string) => {
   try {
@@ -38,14 +40,17 @@ const handleUpgrade = async (planName: string) => {
     });
     // const data = await response.json();
     if (response.success) {
-      alert("Plan upgraded successfully!");
-      // Optionally refresh user info or subscription status
+      alert("Are U sure to upgrade the Plan !");
+      window.open("https://www.amyntasmedia.com/product/prosign-email/", "_blank");
+      
+ 
     }
   } catch (error) {
     console.error("Upgrade failed:", error);
   }
 };
   const usageLimits: FeatureLimit[] = [
+    { name: "Mail Merge", used: 12, total: currentPlan === "free" ? 20 : 999 },
     { name: "Email Signatures", used: 3, total: currentPlan === "free" ? 5 : 999 },
     { name: "Signature Edits", used: 8, total: currentPlan === "free" ? 10 : 999 },
     { name: "Exports / Downloads", used: 2, total: currentPlan === "free" ? 3 : 999 },
@@ -54,24 +59,24 @@ const handleUpgrade = async (planName: string) => {
   const featureAccess: FeatureAccess[] = [
     { name: "Remove Branding", allowed: currentPlan !== "free" },
     { name: "Custom HTML Editor", allowed: currentPlan !== "free" },
-    { name: "Team Signatures", allowed: currentPlan === "Enterprise" },
-    { name: "API Access", allowed: currentPlan === "Enterprise" },
+    // { name: "Team Signatures", allowed: currentPlan === "Enterprise" },
+    // { name: "API Access", allowed: currentPlan === "Enterprise" },
   ];
 
   /* ---------------- PLAN SELECTION ---------------- */
   const plans = [
     {
       name: "Free",
-      description: "Up to 50 recipients / day. Real-time tracking included.",
-      price: "$0 / month",
-      features: ["Basic usage limits", "Track opens & clicks"],
+      description: "Up to 20 recipients / day. Real-time tracking included.",
+      price: "₹0 / month",
+      features: ["Basic usage limits"],
       isSelected: !subscribed || currentPlan === "free",
     },
     {
       name: "Pro",
-      description: "Up to 400 recipients / day. Schedule sends & advanced tracking.",
-      price: "$3 / month",
-      features: ["Higher usage limits", "Schedule sends", "Advanced tracking"],
+      description: "Up to 1000 recipients / day. Schedule sends & advanced tracking.",
+      price: "₹287 / month",
+      features: ["Higher usage limits", "Schedule sends", "Advanced tracking", "Track opens & clicks"],
       isSelected: subscribed && currentPlan === "pro",
     },
   ];

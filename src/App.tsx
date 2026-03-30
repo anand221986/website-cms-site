@@ -10,22 +10,15 @@ const ConnectSuccess = lazy(() => import("./pages/ConnectSuccess"));
 import Index from "./pages/Index";
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Settings = lazy(() => import("./pages/Settings"));
-const WebsiteSetting = lazy(() => import("./pages/WebSiteSetting"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const Users = lazy(() => import("./pages/Users"));
-const Cms = lazy(() => import("./pages/Cms"));
-const Testimonial = lazy(() => import("./pages/Testimonial"));
-const Blog = lazy(() => import("./pages/Blog"));
-const Lead = lazy(() => import("./pages/Lead"));
 const Plan=lazy(() => import("./pages/Plan"));
-const Tenants = lazy(() => import("./pages/Tenants"));
-const PageSectionList = lazy(() => import("./pages/PageSectionList"));
 const MailSignature=lazy(() => import("./pages/MailSignature"));
 const MailMerger = lazy(() => import("./pages/MailMerger"));
+const MailReciepent = lazy(() => import("./pages/MailReciepent"));
 const UnSubscripion = lazy(() => import("./pages/UnSubscripion"));
-
 import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
@@ -44,35 +37,24 @@ const App = () => (
 
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-
-                <Route path="/c-m-s" element={<ProtectedRoute><Cms /></ProtectedRoute>} />
-                <Route path="/testimonial" element={<ProtectedRoute><Testimonial /></ProtectedRoute>} />
-                <Route path="/blogs" element={<ProtectedRoute><Blog /></ProtectedRoute>} />
-                <Route path="/leads" element={<ProtectedRoute><Lead /></ProtectedRoute>} />
-                <Route path="/tenants" element={<ProtectedRoute><Tenants /></ProtectedRoute>} />
                <Route path="/plans" element={<ProtectedRoute><Plan/></ProtectedRoute>} />
-                
-
-                <Route path="/pages/:pageId/sections" element={<ProtectedRoute><PageSectionList /></ProtectedRoute>} />
-
-                <Route
-                  path="/website-setting"
-                  element={
-                    <ProtectedRoute>
-                      <WebsiteSetting />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route
                   path="/mail-merge"
                   element={
                     <ProtectedRoute>
                       <MailMerger />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/mail-receipent/:jobId"
+                  element={
+                    <ProtectedRoute>
+                      <MailReciepent />
                     </ProtectedRoute>
                   }
                 />
@@ -95,8 +77,6 @@ const App = () => (
                 />
                 <Route path="/google-success" element={<GoogleSuccess />} />
                 <Route path="/connect-success" element={<ConnectSuccess />} />
-                
-
                 <Route path="*" element={<NotFound />} />
 
               </Routes>
@@ -107,5 +87,4 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
-
 export default App;

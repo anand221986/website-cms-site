@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import AddTemplateDialog from "@/components/AddTemplateDialog";
+import { useAuth } from "@/context/AuthContext";
 
 interface EmailTemplate {
   id: number;
@@ -39,6 +40,7 @@ export default function EmailTemplatesTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogErrors, setDialogErrors] = useState<Record<string, string>>({});
   const [isCreateMode, setIsCreateMode] = useState(false);
+  
   const [editingTemplate, setEditingTemplate] =
     useState<EmailTemplate | null>(null);
   const [formData, setFormData] = useState({
@@ -46,6 +48,8 @@ export default function EmailTemplatesTable({
     subject: "",
     body: "",
   });
+    const { getUserDetails } = useAuth();
+    const users = getUserDetails();
   const [errors, setErrors] = useState<Record<string, string>>({});
   /* -------------------- VALIDATION -------------------- */
   // const validateForm = () => {
@@ -76,7 +80,7 @@ export default function EmailTemplatesTable({
     try {
       setLoading(true);
       const res = await axios.get<EmailTemplate[]>(
-        `${API_BASE_URL}/email/templates`
+        `${API_BASE_URL}/email/templates/${users?.userId}`
       );
       setTemplates(res.data);
     } catch {
@@ -138,7 +142,11 @@ export default function EmailTemplatesTable({
 
     try {
       if (isCreateMode) {
-        await axios.post(`${API_BASE_URL}/email/templates`, data);
+        const payload = {
+    ...data,
+    user_id: users?.userId,   // 👈 add user id here
+  };
+        await axios.post(`${API_BASE_URL}/email/templates`, payload);
         toast.success("Template created successfully");
       } else if (editingTemplate) {
         await axios.put(

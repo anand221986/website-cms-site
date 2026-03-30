@@ -46,9 +46,9 @@ export default function LoginForm() {
         { token: credentialResponse.credential },
         { headers: { "Content-Type": "application/json" } }
       );
-      const { accessToken, user,googleAccessToken } = res.data;
+      const { accessToken, user,googleAccessToken,licenses } = res.data;
       // console.log(accessToken, user, 'rahul')
-      await loginWithGoogle(accessToken, user);
+      await loginWithGoogle(accessToken, user, user.licenses);
       navigate("/");
     } catch (err) {
       console.error("Google login failed", err);

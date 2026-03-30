@@ -10,63 +10,71 @@ import { jwtDecode } from "jwt-decode";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-/* ===================== TYPES ===================== */
+/* ================= TYPES ================= */
 
 type DecodedToken = {
   sub: number;
   name: string;
   email: string;
   role?: string | string[];
-  "cognito:groups"?: string[];
+  subscription:string;
   exp?: number;
-  subscription?:string;
 };
 
 type GoogleUser = {
+  id?: number;
   name: string;
   email: string;
   picture?: string;
+  role?: string;
+};
+
+type License = {
+  product: string;
+  status: string;
+  expiry_date?: string | null;
 };
 
 type UserDetails = {
-  recruiter_Id: number;
+  userId: number;
   name: string;
   email: string;
   roles: string;
-  userId: number;
-  subscription:string;
+  subscription:string
 };
 
 interface AuthContextType {
   user: GoogleUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
   googleAccessToken?: string;
-  loginWithGoogle: (token: string, user: GoogleUser) => void;
+  login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (token: string, user: GoogleUser, licenses: License[]) => void;
   logout: () => void;
   getUserRoles: () => string[];
   getUserDetails: () => UserDetails | null;
+  getUserLicenses: () => string[];
 }
 
-/* ===================== CONTEXT ===================== */
+/* ================= CONTEXT ================= */
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  googleAccessToken: undefined,
   login: async () => {},
   loginWithGoogle: () => {},
   logout: () => {},
   getUserRoles: () => [],
   getUserDetails: () => null,
+  getUserLicenses: () => [],
 });
 
-/* ===================== PROVIDER ===================== */
+/* ================= PROVIDER ================= */
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [loading, setLoading] = useState(true);
-const [googleAccessToken, setGoogleAccessToken] = useState<string | undefined>(undefined);
-  /* ===================== INIT ===================== */
+  const [googleAccessToken, setGoogleAccessToken] = useState<string>();
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -75,11 +83,10 @@ const [googleAccessToken, setGoogleAccessToken] = useState<string | undefined>(u
     if (token && savedUser) {
       try {
         const decoded = jwtDecode<DecodedToken>(token);
+
         if (!decoded.exp || decoded.exp * 1000 > Date.now()) {
           setUser(JSON.parse(savedUser));
-           if ((JSON.parse(savedUser) as GoogleUser)?.email) {
-            setGoogleAccessToken(token);
-          }
+          setGoogleAccessToken(token);
         } else {
           logout();
         }
@@ -91,43 +98,86 @@ const [googleAccessToken, setGoogleAccessToken] = useState<string | undefined>(u
     setLoading(false);
   }, []);
 
-  /* ===================== LOGIN ===================== */
+  /* ================= LOGIN ================= */
 
   const login = async (email: string, password: string) => {
+    const { data } = await axios.post(`${API_BASE_URL}/auth/signin`, {
+      email,
+      password,
+    });
+
+    const { accessToken, user } = data;
+
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("licenses", JSON.stringify(user.licenses || []));
+
+    setUser(user);
+  };
+
+  /* ================= GOOGLE LOGIN ================= */
+
+  const loginWithGoogle = (
+    token: string,
+    user: GoogleUser,
+    licenses: License[]
+  ) => {
+    localStorage.setItem("accessToken", token);
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("licenses", JSON.stringify(licenses));
+
+    setUser(user);
+    setGoogleAccessToken(token);
+  };
+
+  /* ================= USER DETAILS ================= */
+
+  const getUserDetails = (): UserDetails | null => {
+    const token = localStorage.getItem("accessToken");
+
+    if (!token) return null;
+
     try {
-      const { data } = await axios.post(`${API_BASE_URL}/auth/signin`, {
-        email,
-        password,
-      });
+      const decoded = jwtDecode<DecodedToken>(token);
 
-      const { accessToken, refreshToken, agency_id, id } = data;
-
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("agency_id", agency_id);
-      localStorage.setItem("recruiter_id", id);
-      localStorage.setItem("user", JSON.stringify(data));
-
-      setUser(data);
-    } catch (error) {
-      console.error("Login failed", error);
-      throw new Error("Invalid credentials");
+      return {
+        userId: decoded.sub,
+        name: decoded.name,
+        email: decoded.email,
+        subscription:decoded.subscription,
+        roles: Array.isArray(decoded.role)
+          ? decoded.role.join(", ")
+          : decoded.role || "",
+      };
+      
+    } catch {
+      return null;
     }
   };
 
-  /* ===================== GOOGLE LOGIN ===================== */
+  /* ================= LICENSES ================= */
 
-  const loginWithGoogle = (token: string, user: GoogleUser) => {
-    localStorage.setItem("accessToken", token);
-    localStorage.setItem("user", JSON.stringify(user));
-    setUser(user);
-    setGoogleAccessToken(token); // Save Google access token in sta
+  const getUserLicenses = (): string[] => {
+    const licenses = localStorage.getItem("licenses");
+
+    if (!licenses) return [];
+
+    try {
+      const parsed: License[] = JSON.parse(licenses);
+
+      return parsed
+        .filter((l) => l.status === "active")
+        .map((l) => l.product.trim().toLowerCase());
+    } catch {
+      return [];
+    }
   };
 
-  /* ===================== ROLES ===================== */
+  /* ================= ROLES ================= */
 
   const getUserRoles = (): string[] => {
     const token = localStorage.getItem("accessToken");
+
     if (!token) return [];
 
     try {
@@ -135,7 +185,6 @@ const [googleAccessToken, setGoogleAccessToken] = useState<string | undefined>(u
 
       if (Array.isArray(decoded.role)) return decoded.role;
       if (decoded.role) return [decoded.role];
-      if (decoded["cognito:groups"]) return decoded["cognito:groups"];
 
       return [];
     } catch {
@@ -143,59 +192,30 @@ const [googleAccessToken, setGoogleAccessToken] = useState<string | undefined>(u
     }
   };
 
-  /* ===================== USER DETAILS ===================== */
-
-  const getUserDetails = (): UserDetails | null => {
-    const token = localStorage.getItem("accessToken");
-    const recruiterId = Number(localStorage.getItem("recruiter_id"));
-
-    if (!token) return null;
-
-    try {
-      const decoded = jwtDecode<DecodedToken>(token);
-      console.log(decoded,'decoded value')
-
-      return {
-        recruiter_Id: recruiterId,
-        name: decoded.name,
-        email: decoded.email,
-        roles: Array.isArray(decoded.role)
-          ? decoded.role.join(", ")
-          : decoded.role || "",
-        userId: decoded.sub,
-        subscription:decoded.subscription,
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  /* ===================== LOGOUT ===================== */
+  /* ================= LOGOUT ================= */
 
   const logout = () => {
     setUser(null);
     localStorage.clear();
   };
 
-  /* ===================== PROVIDER ===================== */
-
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
+        googleAccessToken,
         login,
         loginWithGoogle,
         logout,
         getUserRoles,
         getUserDetails,
+        getUserLicenses,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
-
-/* ===================== HOOK ===================== */
 
 export const useAuth = () => useContext(AuthContext);
