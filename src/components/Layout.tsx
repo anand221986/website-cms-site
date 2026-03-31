@@ -84,17 +84,35 @@ function AppSidebar() {
   const userRole = getUserDetails()?.roles?.toLowerCase() || "";
   const userLicenses = getUserLicenses();
 
-const filteredMenuItems = menuItems.filter((item) => {
+// const filteredMenuItems = menuItems.filter((item) => {
 
+//   const roleAllowed =
+//     !item.roles ||
+//     item.roles.some((role) => role.toLowerCase() === userRole);
+
+//   const licenseAllowed =
+//     !item.license ||
+//     userLicenses.includes(item.license.toLowerCase());
+//     console.log("User Licenses:", userLicenses);
+// console.log("Menu License:", item.license);
+
+//   return roleAllowed && licenseAllowed;
+// });
+const filteredMenuItems = menuItems.filter((item) => {
+  // 1. Role Check
   const roleAllowed =
     !item.roles ||
     item.roles.some((role) => role.toLowerCase() === userRole);
 
+  // 2. License Check
+  // If the user has NO licenses in the database, we treat them as a "Free" user.
+  // Free users should be allowed to see the menu items!
+  const isFreeUser = userLicenses.length === 0;
+
   const licenseAllowed =
-    !item.license ||
+    !item.license || 
+    isFreeUser || 
     userLicenses.includes(item.license.toLowerCase());
-    console.log("User Licenses:", userLicenses);
-console.log("Menu License:", item.license);
 
   return roleAllowed && licenseAllowed;
 });

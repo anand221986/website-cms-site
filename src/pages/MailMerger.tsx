@@ -6,6 +6,7 @@ import { Eye,Trash2, Upload } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 import { StatusBadge } from "./StatusBadge";
+import { useAuth } from "@/context/AuthContext";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Tabs,
@@ -108,6 +109,8 @@ interface ApiResponse<T> {
 }
 const CMS = () => {
    const navigate = useNavigate();
+     const { getUserDetails } = useAuth();
+       const users = getUserDetails();
   const [activeTab, setActiveTab] =
     useState<"pages" | "template">("pages");
   const [jobs, setJobs] = useState<MailMergeJob[]>([]);
@@ -161,7 +164,7 @@ const handleViewRecipients = async (jobId: number) => {
     setLoading(true);
     try {
       const { data } = await axios.get<ApiResponse<MailMergeJob[]>>(
-        `${API_BASE_URL}/email/merge-jobs`
+        `${API_BASE_URL}/email/merge-jobs/${users?.userId}`
       );
       setJobs(data.result);
     } catch {
@@ -243,7 +246,7 @@ const handleViewRecipients = async (jobId: number) => {
     setLoading(true);
     try {
       const { data } = await axios.get<ApiResponse<MailTemplate[]>>(
-        `${API_BASE_URL}/email/mail-templates`
+        `${API_BASE_URL}/email/mail-templates/${users?.userId}`
       );
       setTemplates(data.result);
     } catch (error) {
