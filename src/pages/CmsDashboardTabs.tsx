@@ -81,9 +81,6 @@ const CMSSettingsTabs = () => {
    const fetchPages = async () => {
     setLoading(true);
     try {
-      // const { data } = await axios.get(
-      //   `${API_BASE_URL}/pages/getAllPages`
-      // );
       const { data } = {
   data: [
     {
@@ -122,5 +119,4 @@ const CMSSettingsTabs = () => {
         </Tabs>
   );
 };
-
 export default CMSSettingsTabs;

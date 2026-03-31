@@ -32,10 +32,9 @@ const GoogleSuccess = () => {
           }
         );
 
-        const user = response.data;
-
+        const { user, role }= response.data;
         // ✅ Store token + user in AuthContext
-        loginWithGoogle(token, user);
+      loginWithGoogle(token, user, role);
 
         // ✅ Redirect to dashboard
         navigate("/", { replace: true });
